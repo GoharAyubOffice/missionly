@@ -32,6 +32,11 @@ const configSchema = z.object({
   // Application
   NEXT_PUBLIC_APP_URL: z.string().url(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  
+  // Web Push Notifications
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string(),
+  VAPID_PRIVATE_KEY: z.string(),
+  VAPID_SUBJECT: z.string().email(),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -54,6 +59,9 @@ function createConfig(): Config {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NODE_ENV: process.env.NODE_ENV,
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+    VAPID_SUBJECT: process.env.VAPID_SUBJECT,
   };
 
   try {
@@ -75,6 +83,7 @@ export const getPublicConfig = () => ({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: config.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: config.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   NEXT_PUBLIC_APP_URL: config.NEXT_PUBLIC_APP_URL,
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: config.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
 });
 
 export const getServerConfig = () => config;

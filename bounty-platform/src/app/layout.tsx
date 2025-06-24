@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +16,31 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Bounty Platform",
-  description: "A platform for managing bounties and freelance work",
+  description: "Performance-based marketing bounty platform where businesses post measurable goals and marketers compete to deliver real business results",
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-96x96.png", sizes: "96x96", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icon-152x152.png", sizes: "152x152", type: "image/png" },
+      { url: "/icon-180x180.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Bounty Platform",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "msapplication-TileColor": "#1B4F72",
+    "msapplication-config": "/browserconfig.xml",
+  },
 };
 
 export default function RootLayout({
@@ -31,6 +56,7 @@ export default function RootLayout({
         <AppProviders>
           {children}
         </AppProviders>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

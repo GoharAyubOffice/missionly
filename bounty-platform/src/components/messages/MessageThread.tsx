@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useOptimistic } from 'react';
+import React, { useState, useEffect, useRef, useOptimistic, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { sendMessage, markMessagesAsRead } from '@/app/actions/messages';
 import { supabase } from '@/lib/supabase/client';
+import { useContextualNotificationPrompt } from '@/components/notifications/PushNotificationManager';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 interface Message {
   id: string;
@@ -55,17 +57,60 @@ export function MessageThread({
 }: MessageThreadProps) {
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [isConnected, setIsConnected] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { promptForMessages, isSupported: notificationsSupported } = useContextualNotificationPrompt();
+
+  // Sync messages when initialMessages change
+  useEffect(() => {
+    setMessages(initialMessages);
+  }, [initialMessages]);
 
   // Optimistic updates for messages
   const [optimisticMessages, addOptimisticMessage] = useOptimistic(
-    initialMessages,
+    messages,
     (state: OptimisticMessage[], newMessage: OptimisticMessage) => [
       ...state,
       newMessage,
     ]
   );
+
+  // Handle real-time message updates
+  const handleRealtimeMessage = useCallback((payload: RealtimePostgresChangesPayload<any>) => {
+    if (payload.eventType === 'INSERT' && payload.new) {
+      const newMessage = payload.new;
+      
+      // Only add if it's not from current user (to avoid duplicates with optimistic updates)
+      if (newMessage.sender_id !== currentUserId) {
+        // Fetch the complete message with sender details
+        setMessages(prevMessages => {
+          // Check if message already exists to prevent duplicates
+          const messageExists = prevMessages.some(msg => msg.id === newMessage.id);
+          if (messageExists) return prevMessages;
+          
+          // Add the new message with sender info
+          // Note: In a real implementation, you might want to fetch the complete message
+          // with sender details from the server here
+          const messageWithSender: Message = {
+            id: newMessage.id,
+            content: newMessage.content,
+            type: newMessage.type,
+            readAt: newMessage.read_at,
+            createdAt: newMessage.created_at,
+            sender: {
+              id: newMessage.sender_id,
+              name: bounty.client.id === newMessage.sender_id ? bounty.client.name : bounty.freelancer.name,
+              avatar: bounty.client.id === newMessage.sender_id ? bounty.client.avatar : bounty.freelancer.avatar,
+            },
+          };
+          
+          return [...prevMessages, messageWithSender];
+        });
+      }
+    }
+  }, [currentUserId, bounty]);
 
   // Real-time message updates
   useEffect(() => {
@@ -79,27 +124,46 @@ export function MessageThread({
           table: 'messages',
           filter: `thread_id=eq.${threadId}`,
         },
-        (payload) => {
-          // Only add if it's not from current user (to avoid duplicates with optimistic updates)
-          const newMessage = payload.new as any;
-          if (newMessage.sender_id !== currentUserId) {
-            // This would need a state setter to add the new message
-            // For now, we'll refresh the page or use a more complex state management
-            window.location.reload();
-          }
-        }
+        handleRealtimeMessage
       )
-      .subscribe();
+      .on('presence', { event: 'sync' }, () => {
+        setIsConnected(true);
+      })
+      .on('presence', { event: 'join' }, () => {
+        setIsConnected(true);
+      })
+      .on('presence', { event: 'leave' }, () => {
+        setIsConnected(false);
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setIsConnected(false);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [threadId, currentUserId]);
+  }, [threadId, handleRealtimeMessage]);
 
   // Mark messages as read when component mounts or messages change
   useEffect(() => {
     markMessagesAsRead(threadId);
-  }, [threadId, optimisticMessages]);
+  }, [threadId, messages]);
+
+  // Prompt for notifications when user starts engaging with messages
+  useEffect(() => {
+    if (notificationsSupported && messages.length > 0) {
+      // Delay the prompt to avoid interrupting the user immediately
+      const timer = setTimeout(() => {
+        promptForMessages();
+      }, 5000); // Show prompt after 5 seconds of being in the conversation
+
+      return () => clearTimeout(timer);
+    }
+  }, [notificationsSupported, promptForMessages, messages.length]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -124,7 +188,7 @@ export function MessageThread({
     const tempId = `temp-${Date.now()}`;
     
     // Add optimistic message
-    addOptimisticMessage({
+    const optimisticMsg: OptimisticMessage = {
       id: tempId,
       content: messageContent,
       type: 'TEXT',
@@ -137,21 +201,34 @@ export function MessageThread({
       },
       isOptimistic: true,
       isPending: true,
-    });
-
+    };
+    
+    addOptimisticMessage(optimisticMsg);
     setNewMessage('');
     setIsSending(true);
 
     try {
       const result = await sendMessage(threadId, messageContent);
       
-      if (!result.success) {
-        // Remove optimistic message on error
-        // This would need a more sophisticated state management
-        alert(result.error);
+      if (result.success && result.messageId) {
+        // Update the optimistic message with the real message ID
+        // The optimistic message will be automatically replaced by the real one from server
+        setMessages(prevMessages => {
+          return prevMessages.map(msg => 
+            msg.id === tempId 
+              ? { ...msg, id: result.messageId!, isOptimistic: false, isPending: false } as Message
+              : msg
+          );
+        });
+      } else {
+        // Remove optimistic message on error and show error
+        setMessages(prevMessages => prevMessages.filter(msg => msg.id !== tempId));
+        alert(result.error || 'Failed to send message');
       }
     } catch (error) {
       console.error('Send message error:', error);
+      // Remove optimistic message on error
+      setMessages(prevMessages => prevMessages.filter(msg => msg.id !== tempId));
       alert('Failed to send message');
     } finally {
       setIsSending(false);
@@ -185,9 +262,17 @@ export function MessageThread({
       <div className="flex-shrink-0 p-4 border-b border-border bg-background-secondary">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-text-primary line-clamp-1">
-              {bounty.title}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-text-primary line-clamp-1">
+                {bounty.title}
+              </h2>
+              <div className={cn(
+                "w-2 h-2 rounded-full transition-colors",
+                isConnected ? "bg-accent-green" : "bg-error"
+              )} 
+              title={isConnected ? "Connected" : "Disconnected"} 
+              />
+            </div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-sm text-text-muted">Conversation between</span>
               <div className="flex items-center gap-1">
