@@ -66,11 +66,17 @@ export const additionalSettingsSchema = bountyCreationSchema.pick({
   attachments: true,
 });
 
+// Payment step schema (no validation needed for the form step itself)
+export const paymentSchema = z.object({
+  paymentCompleted: z.boolean().default(false),
+});
+
 export type BountyCreationFormData = z.infer<typeof bountyCreationSchema>;
 export type BasicInfoData = z.infer<typeof basicInfoSchema>;
 export type RequirementsData = z.infer<typeof requirementsSchema>;
 export type BudgetTimelineData = z.infer<typeof budgetTimelineSchema>;
 export type AdditionalSettingsData = z.infer<typeof additionalSettingsSchema>;
+export type PaymentData = z.infer<typeof paymentSchema>;
 
 // Form steps configuration
 export const FORM_STEPS = [
@@ -97,6 +103,12 @@ export const FORM_STEPS = [
     title: 'Additional Settings',
     description: 'Final details and attachments',
     schema: additionalSettingsSchema,
+  },
+  {
+    id: 'payment',
+    title: 'Payment & Publish',
+    description: 'Secure your bounty with escrow payment',
+    schema: paymentSchema,
   },
 ] as const;
 

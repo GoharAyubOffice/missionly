@@ -5,16 +5,25 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { EscrowReleaseModal } from '@/components/ui/EscrowReleaseModal';
 import { cn } from '@/lib/utils';
 import { publishBounty, deleteBounty } from '@/app/actions/bounties';
+import { releaseEscrowPayment } from '@/app/actions/stripe';
+import { createMessageThread } from '@/app/actions/messages';
 
 interface BountyActionsProps {
   bounty: {
     id: string;
     title: string;
+    budget: number;
     status: 'DRAFT' | 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
     clientId: string;
     assigneeId?: string | null;
+    assignee?: {
+      id: string;
+      name: string | null;
+      avatar: string | null;
+    } | null;
     applications: any[];
     _count: {
       applications: number;
@@ -34,6 +43,7 @@ export function BountyActions({ bounty, currentUser, className }: BountyActionsP
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showEscrowModal, setShowEscrowModal] = useState(false);
 
   const isOwner = currentUser?.id === bounty.clientId;
   const isFreelancer = currentUser?.role === 'FREELANCER';
@@ -98,6 +108,42 @@ export function BountyActions({ bounty, currentUser, className }: BountyActionsP
 
   const handleManage = () => {
     router.push(`/bounties/${bounty.id}/manage`);
+  };
+
+  const handleStartMessage = async () => {
+    try {
+      const result = await createMessageThread(bounty.id);
+      
+      if (result.success && result.threadId) {
+        router.push(`/messages/${result.threadId}`);
+      } else {
+        alert(result.error || 'Failed to create message thread');
+      }
+    } catch (error) {
+      console.error('Error creating message thread:', error);
+      alert('An unexpected error occurred while creating message thread');
+    }
+  };
+
+  const handleReleaseEscrow = async () => {
+    if (!bounty.assigneeId) {
+      alert('No freelancer assigned to this bounty');
+      return;
+    }
+
+    try {
+      const result = await releaseEscrowPayment(bounty.id, bounty.assigneeId);
+      
+      if (result.success) {
+        router.refresh(); // Refresh the page to show updated status
+        setShowEscrowModal(false);
+      } else {
+        alert(result.error || 'Failed to release payment');
+      }
+    } catch (error) {
+      console.error('Error releasing escrow payment:', error);
+      alert('An unexpected error occurred while releasing payment');
+    }
   };
 
   // Don't show actions if user is not authenticated
@@ -215,12 +261,19 @@ export function BountyActions({ bounty, currentUser, className }: BountyActionsP
                   Manage Project
                 </Button>
                 <Button
-                  variant="success"
+                  variant="outline"
                   className="w-full"
-                  onClick={handleMarkComplete}
+                  onClick={handleStartMessage}
+                >
+                  💬 Message Freelancer
+                </Button>
+                <Button
+                  variant="warning"
+                  className="w-full"
+                  onClick={() => setShowEscrowModal(true)}
                   disabled={!hasSubmissions}
                 >
-                  Mark as Complete
+                  🔓 Release Payment
                 </Button>
               </>
             )}
@@ -294,6 +347,13 @@ export function BountyActions({ bounty, currentUser, className }: BountyActionsP
                   onClick={() => router.push(`/bounties/${bounty.id}/workspace`)}
                 >
                   Project Workspace
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleStartMessage}
+                >
+                  💬 Message Client
                 </Button>
               </>
             )}
@@ -424,6 +484,21 @@ export function BountyActions({ bounty, currentUser, className }: BountyActionsP
           </div>
         </div>
       </Modal>
+
+      {/* Escrow Release Confirmation Modal */}
+      {bounty.assignee && (
+        <EscrowReleaseModal
+          isOpen={showEscrowModal}
+          onClose={() => setShowEscrowModal(false)}
+          onConfirm={handleReleaseEscrow}
+          bounty={{
+            id: bounty.id,
+            title: bounty.title,
+            budget: bounty.budget,
+            assignee: bounty.assignee,
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -14,13 +14,15 @@ import {
   requirementsSchema,
   budgetTimelineSchema,
   additionalSettingsSchema,
+  paymentSchema,
   bountyCreationSchema
 } from '@/lib/validators/bounty';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { PaymentForm } from './PaymentForm';
 
 interface BountyCreationFormProps {
-  onSubmit: (data: BountyCreationFormData) => Promise<void>;
+  onSubmit: (data: BountyCreationFormData) => Promise<{ success: boolean; bountyId?: string; error?: string; }>;
   isLoading?: boolean;
 }
 
@@ -221,6 +223,9 @@ const StepIndicator: React.FC<{ currentStep: FormStepId; completedSteps: Set<For
 };
 
 export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreationFormProps) {
+  const [createdBountyId, setCreatedBountyId] = useState<string | null>(null);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  
   const {
     formData,
     currentStep,
@@ -294,16 +299,32 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
     try {
       setSubmitting(true);
       
-      // Validate the entire form
-      const fullData = { ...formData, ...data };
-      const validatedData = bountyCreationSchema.parse(fullData);
-      
-      await onSubmit(validatedData);
+      // If we're on the additional-settings step, create the bounty
+      if (currentStep === 'additional-settings') {
+        const fullData = { ...formData, ...data };
+        const validatedData = bountyCreationSchema.parse(fullData);
+        
+        const result = await onSubmit(validatedData);
+        
+        if (result.success && result.bountyId) {
+          setCreatedBountyId(result.bountyId);
+          markStepComplete(currentStep);
+          setCurrentStep('payment');
+        } else {
+          console.error('Bounty creation failed:', result.error);
+        }
+      }
     } catch (error) {
       console.error('Form submission error:', error);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    setPaymentCompleted(true);
+    markStepComplete('payment');
+    // Redirect or show success message
   };
 
   const isLastStep = currentStepIndex === FORM_STEPS.length - 1;
@@ -525,41 +546,100 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
                   </div>
                 </>
               )}
+
+              {currentStep === 'payment' && (
+                <>
+                  {createdBountyId ? (
+                    <PaymentForm
+                      bountyId={createdBountyId}
+                      amount={Number(formData.budget || 0)}
+                      title={formData.title || 'Untitled Bounty'}
+                      onSuccess={handlePaymentSuccess}
+                      onCancel={() => setCurrentStep('additional-settings')}
+                    />
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-error/10 rounded-full flex items-center justify-center">
+                        <svg className="w-8 h-8 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-semibold text-text-primary mb-2">
+                        Bounty Creation Failed
+                      </h3>
+                      <p className="text-text-secondary mb-4">
+                        Please go back and try creating your bounty again.
+                      </p>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setCurrentStep('additional-settings')}
+                      >
+                        Go Back
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {paymentCompleted && (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-success/10 rounded-full flex items-center justify-center">
+                    <svg className="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-text-primary mb-2">
+                    Bounty Published Successfully!
+                  </h3>
+                  <p className="text-text-secondary mb-4">
+                    Your bounty is now live and freelancers can start applying.
+                  </p>
+                  <Button
+                    variant="primary"
+                    onClick={() => window.location.href = `/bounties/${createdBountyId}`}
+                  >
+                    View Your Bounty
+                  </Button>
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
 
-          <div className="flex items-center justify-between pt-6 border-t border-border">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={goToPreviousStep}
-              disabled={currentStepIndex === 0}
-            >
-              Previous
-            </Button>
+          {/* Navigation buttons - hide during payment step and after completion */}
+          {currentStep !== 'payment' && !paymentCompleted && (
+            <div className="flex items-center justify-between pt-6 border-t border-border">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={goToPreviousStep}
+                disabled={currentStepIndex === 0}
+              >
+                Previous
+              </Button>
 
-            <div className="flex space-x-3">
-              {!isLastStep ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={goToNextStep}
-                  disabled={!canProceed}
-                >
-                  Next Step
-                </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  variant="success"
-                  loading={isLoading || isSubmitting}
-                  disabled={isLoading || isSubmitting || !canProceed}
-                >
-                  Create Bounty
-                </Button>
-              )}
+              <div className="flex space-x-3">
+                {currentStep === 'additional-settings' ? (
+                  <Button
+                    type="submit"
+                    variant="success"
+                    loading={isLoading || isSubmitting}
+                    disabled={isLoading || isSubmitting || !canProceed}
+                  >
+                    Create Bounty
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={goToNextStep}
+                    disabled={!canProceed}
+                  >
+                    Next Step
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </form>
       </div>
     </div>

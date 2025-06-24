@@ -16,17 +16,26 @@ export default function CreateBountyPage() {
       
       const result = await createBounty(data);
       
-      if (result.success) {
-        // Redirect to the created bounty or bounty list
-        router.push(`/bounties/${result.bountyId}`);
+      if (result.success && result.bountyId) {
+        // Return the result to the form for payment processing
+        return {
+          success: true,
+          bountyId: result.bountyId,
+        };
       } else {
         // Handle error case
         console.error('Failed to create bounty:', result.error);
-        // You could show a toast notification here
+        return {
+          success: false,
+          error: result.error || 'Failed to create bounty',
+        };
       }
     } catch (error) {
       console.error('Error creating bounty:', error);
-      // Handle unexpected errors
+      return {
+        success: false,
+        error: 'An unexpected error occurred',
+      };
     } finally {
       setIsLoading(false);
     }

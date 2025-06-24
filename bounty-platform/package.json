@@ -27,6 +27,7 @@
     "react-hook-form": "^7.58.1",
     "resend": "^4.6.0",
     "stripe": "^18.2.1",
+    "web-push": "^3.6.7",
     "zod": "^3.25.67",
     "zustand": "^5.0.5"
   },
