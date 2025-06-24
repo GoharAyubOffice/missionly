@@ -34,6 +34,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isAuthRoute = pathname.startsWith('/register') || pathname.startsWith('/login');
+  const isOnboardingRoute = pathname.startsWith('/onboarding');
   const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/profile');
   const isPublicRoute = pathname === '/' || pathname.startsWith('/about') || pathname.startsWith('/contact');
 
@@ -43,14 +44,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (isProtectedRoute && !user) {
+  if ((isProtectedRoute || isOnboardingRoute) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname === '/') {
+  // Check profile completion for authenticated users
+  if (user && (pathname === '/' || isProtectedRoute) && !isOnboardingRoute) {
     try {
       const userResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/user`, {
         headers: {
@@ -60,9 +62,26 @@ export async function middleware(request: NextRequest) {
 
       if (userResponse.ok) {
         const userData = await userResponse.json();
-        const url = request.nextUrl.clone();
-        url.pathname = userData.role === 'CLIENT' ? '/dashboard/client' : '/dashboard/freelancer';
-        return NextResponse.redirect(url);
+        
+        // Check if profile needs completion
+        const needsOnboarding = userData.status === 'PENDING_VERIFICATION' || 
+                               !userData.bio || 
+                               !userData.location || 
+                               !userData.skills || 
+                               userData.skills.length === 0;
+
+        if (needsOnboarding && !pathname.startsWith('/onboarding')) {
+          const url = request.nextUrl.clone();
+          url.pathname = '/onboarding';
+          return NextResponse.redirect(url);
+        }
+
+        // Redirect from root to appropriate dashboard
+        if (pathname === '/') {
+          const url = request.nextUrl.clone();
+          url.pathname = userData.role === 'CLIENT' ? '/dashboard/client' : '/dashboard/freelancer';
+          return NextResponse.redirect(url);
+        }
       }
     } catch (error) {
       console.error('Error fetching user data in middleware:', error);

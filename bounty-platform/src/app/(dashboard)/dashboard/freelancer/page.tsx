@@ -1,8 +1,39 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 export default function FreelancerDashboard() {
+  const [showWelcome, setShowWelcome] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('onboarding') === 'complete') {
+      setShowWelcome(true);
+      setTimeout(() => setShowWelcome(false), 10000); // Hide after 10 seconds
+    }
+  }, [searchParams]);
+
   return (
     <div className="space-y-6">
+      {showWelcome && (
+        <div className="bg-success-pale border border-success rounded-card p-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-success rounded-full flex items-center justify-center">
+              <svg className="w-6 h-6 text-primary-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-h3 font-bold text-success">Welcome to Bounty Platform!</h3>
+              <p className="text-body text-success">
+                Your profile is now complete. You can start browsing projects and applying for opportunities.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="text-center">
         <h1 className="text-h1 font-bold text-text-primary mb-2">
           Freelancer Dashboard
