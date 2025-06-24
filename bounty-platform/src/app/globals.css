@@ -1,26 +1,293 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primary Colors */
+  --color-primary-blue: #1B4F72;
+  --color-primary-white: #FFFFFF;
+  
+  /* Secondary Colors */
+  --color-secondary-blue-light: #3498DB;
+  --color-secondary-blue-pale: #EBF5FF;
+  --color-secondary-gray: #F8F9FA;
+  
+  /* Accent Colors */
+  --color-accent-green: #27AE60;
+  --color-accent-orange: #F39C12;
+  --color-accent-purple: #8E44AD;
+  
+  /* Functional Colors */
+  --color-success: #2ECC71;
+  --color-error: #E74C3C;
+  --color-warning: #F1C40F;
+  --color-info: #3498DB;
+  
+  /* Text Colors */
+  --color-text-primary: #2C3E50;
+  --color-text-secondary: #7F8C8D;
+  --color-text-muted: #BDC3C7;
+  
+  /* Background Colors */
+  --color-background-primary: #FFFFFF;
+  --color-background-secondary: #F8F9FA;
+  --color-background-dark: #34495E;
+  
+  /* Border Colors */
+  --color-border: #E1E5E9;
+  --color-border-light: #F1F2F6;
+  --color-border-focus: #1B4F72;
+  
+  /* Spacing */
+  --spacing-micro: 2px;
+  --spacing-minimal: 4px;
+  --spacing-small: 8px;
+  --spacing-compact: 12px;
+  --spacing-default: 16px;
+  --spacing-medium: 24px;
+  --spacing-large: 32px;
+  --spacing-xl: 48px;
+  --spacing-max: 64px;
+  
+  /* Border Radius */
+  --radius-button: 8px;
+  --radius-card: 12px;
+  --radius-bounty-card: 16px;
+  --radius-search: 24px;
+  --radius-progress: 4px;
+  
+  /* Shadows */
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-bounty-card: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-bounty-card-hover: 0 6px 16px rgba(0, 0, 0, 0.12);
+  --shadow-focus: 0 0 0 3px rgba(27, 79, 114, 0.3);
+  
+  /* Animation Durations */
+  --duration-micro: 150ms;
+  --duration-standard: 250ms;
+  --duration-emphasis: 350ms;
+  --duration-modal: 300ms;
+  --duration-page: 400ms;
+  --duration-success: 500ms;
+  
+  /* Animation Timing Functions */
+  --timing-ease-out: ease-out;
+  --timing-ease-in-out: ease-in-out;
+  --timing-emphasis: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --timing-page: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Dark Mode Variables */
+.dark {
+  /* Dark Background Colors */
+  --color-background-primary: #1A202C;
+  --color-background-secondary: #2D3748;
+  --color-background-elevated: #4A5568;
+  
+  /* Dark Text Colors */
+  --color-text-primary: #F7FAFC;
+  --color-text-secondary: #E2E8F0;
+  --color-text-muted: #A0AEC0;
+  
+  /* Dark Brand Colors */
+  --color-primary-blue: #4299E1;
+  --color-success: #68D391;
+  --color-warning: #F6AD55;
+  --color-error: #FC8181;
+  
+  /* Dark Border Colors */
+  --color-border: #4A5568;
+  --color-border-light: #2D3748;
+  --color-border-focus: #4299E1;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus States for Accessibility */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  box-shadow: var(--shadow-focus);
+  outline: 2px solid transparent;
+}
+
+/* Button Base Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: 0.1px;
+  border-radius: var(--radius-button);
+  height: 48px;
+  padding: 12px 24px;
+  transition: all var(--duration-standard) var(--timing-ease-out);
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Primary Button */
+.btn-primary {
+  background-color: var(--color-primary-blue);
+  color: var(--color-primary-white);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #154360;
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-primary-blue);
+  border: 2px solid var(--color-primary-blue);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-secondary-blue-pale);
+}
+
+/* Success Button */
+.btn-success {
+  background-color: var(--color-success);
+  color: var(--color-primary-white);
+}
+
+/* Warning Button */
+.btn-warning {
+  background-color: var(--color-accent-orange);
+  color: var(--color-primary-white);
+}
+
+/* Text Button */
+.btn-text {
+  background-color: transparent;
+  color: var(--color-primary-blue);
+  height: 44px;
+  padding: 0;
+}
+
+.btn-text:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+/* Input Styles */
+.input {
+  height: 56px;
+  border-radius: var(--radius-button);
+  border: 2px solid var(--color-border);
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
+  padding: 0 16px;
+  font-size: 16px;
+  transition: border-color var(--duration-standard) var(--timing-ease-out);
+}
+
+.input:focus {
+  border-color: var(--color-border-focus);
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* Search Input */
+.search-input {
+  height: 48px;
+  border-radius: var(--radius-search);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-background-secondary);
+  padding-left: 48px; /* Space for search icon */
+}
+
+/* Card Styles */
+.card {
+  background-color: var(--color-background-primary);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border-light);
+  padding: 24px;
+  transition: box-shadow var(--duration-standard) var(--timing-ease-out);
+}
+
+.bounty-card {
+  background-color: var(--color-background-primary);
+  border-radius: var(--radius-bounty-card);
+  box-shadow: var(--shadow-bounty-card);
+  padding: 20px;
+  transition: box-shadow var(--duration-standard) var(--timing-ease-out);
+}
+
+.bounty-card:hover {
+  box-shadow: var(--shadow-bounty-card-hover);
+}
+
+/* Progress Bar */
+.progress-bar {
+  height: 8px;
+  background-color: var(--color-border);
+  border-radius: var(--radius-progress);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--color-primary-blue);
+  transition: width var(--duration-standard) var(--timing-ease-out);
+}
+
+.progress-fill.success {
+  background-color: var(--color-success);
+}
+
+.progress-fill.warning {
+  background-color: var(--color-accent-orange);
+}
+
+/* Animation Classes */
+.animate-pulse-loading {
+  animation: pulse-loading 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-loading {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
