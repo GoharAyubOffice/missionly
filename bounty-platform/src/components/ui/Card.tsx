@@ -144,7 +144,7 @@ export interface BountyCardProps extends Omit<CardProps, 'variant'> {
   skills?: string[];
   deadline?: string;
   onClick?: () => void;
-  children?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 const statusColors = {

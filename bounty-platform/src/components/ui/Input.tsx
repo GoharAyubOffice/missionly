@@ -43,8 +43,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         'border-error focus:border-error focus:ring-error': hasError,
       },
       // Icon padding adjustments
-      leftIcon && variant === 'default' && 'pl-12',
-      rightIcon && variant === 'default' && 'pr-12',
+      leftIcon && variant === 'default' ? 'pl-12' : '',
+      rightIcon && variant === 'default' ? 'pr-12' : '',
       className
     );
 

@@ -92,7 +92,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         onClick={onClick}
         whileHover={!isDisabled ? buttonHover : undefined}
         whileTap={!isDisabled ? buttonTap : undefined}
-        {...props}
+        {...(props as any)}
       >
         {loading && (
           <LoadingSpinner size={size} />

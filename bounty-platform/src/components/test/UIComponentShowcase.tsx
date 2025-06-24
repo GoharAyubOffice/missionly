@@ -184,7 +184,9 @@ export function UIComponentShowcase() {
                   skills={['React', 'Node.js', 'TypeScript', 'PostgreSQL']}
                   deadline="Dec 31, 2024"
                   onClick={() => console.log('Bounty clicked')}
-                />
+                >
+                  <div>Test bounty card content</div>
+                </BountyCard>
               </div>
             </CardContent>
           </Card>
