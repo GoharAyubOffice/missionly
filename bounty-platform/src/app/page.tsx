@@ -1,9 +1,9 @@
-import { DesignSystemTest } from "@/components/test/DesignSystemTest";
+import { UIComponentShowcase } from "@/components/test/UIComponentShowcase";
 
 export default function Home() {
   return (
     <div>
-      <DesignSystemTest />
+      <UIComponentShowcase />
     </div>
   );
 }
