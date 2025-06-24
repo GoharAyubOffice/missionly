@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  MODERATOR
+  CLIENT
+  FREELANCER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum BountyStatus {
+  DRAFT
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum BountyPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REVISION_REQUESTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentType {
+  BOUNTY_PAYMENT
+  ESCROW_RELEASE
+  REFUND
+}
+
+// Models
+model User {
+  id          String     @id @default(cuid())
+  email       String     @unique
+  name        String?
+  avatar      String?
+  bio         String?
+  website     String?
+  location    String?
+  skills      String[]
+  role        UserRole   @default(CLIENT)
+  status      UserStatus @default(PENDING_VERIFICATION)
+  reputation  Float      @default(0)
+  totalEarned Decimal    @default(0) @db.Decimal(10, 2)
+  totalSpent  Decimal    @default(0) @db.Decimal(10, 2)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Auth fields
+  supabaseId String? @unique
+
+  // Relations
+  clientBounties    Bounty[]      @relation("ClientBounties")
+  applications      Application[]
+  assignedBounties  Bounty[]      @relation("AssignedBounties")
+  submissions       Submission[]
+  sentPayments      Payment[]     @relation("PaymentSender")
+  receivedPayments  Payment[]     @relation("PaymentReceiver")
+  givenReviews      Review[]      @relation("ReviewGiver")
+  receivedReviews   Review[]      @relation("ReviewReceiver")
+
+  @@map("users")
+}
+
+model Bounty {
+  id          String         @id @default(cuid())
+  title       String
+  description String
+  requirements String[]
+  skills      String[]
+  budget      Decimal        @db.Decimal(10, 2)
+  deadline    DateTime?
+  status      BountyStatus   @default(DRAFT)
+  priority    BountyPriority @default(MEDIUM)
+  featured    Boolean        @default(false)
+  tags        String[]
+  attachments String[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relations
+  clientId     String
+  client       User          @relation("ClientBounties", fields: [clientId], references: [id], onDelete: Cascade)
+  assigneeId   String?
+  assignee     User?         @relation("AssignedBounties", fields: [assigneeId], references: [id])
+  applications Application[]
+  submissions  Submission[]
+  payments     Payment[]
+  reviews      Review[]
+
+  @@map("bounties")
+}
+
+model Application {
+  id          String            @id @default(cuid())
+  coverLetter String?
+  proposedBudget Decimal?       @db.Decimal(10, 2)
+  estimatedDays Int?
+  attachments String[]
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Relations
+  bountyId     String
+  bounty       Bounty @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+  applicantId  String
+  applicant    User   @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@unique([bountyId, applicantId])
+  @@map("applications")
+}
+
+model Submission {
+  id          String           @id @default(cuid())
+  title       String
+  description String
+  attachments String[]
+  notes       String?
+  status      SubmissionStatus @default(DRAFT)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  bountyId    String
+  bounty      Bounty @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+  submitterId String
+  submitter   User   @relation(fields: [submitterId], references: [id], onDelete: Cascade)
+
+  @@map("submissions")
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  amount         Decimal       @db.Decimal(10, 2)
+  currency       String        @default("USD")
+  type           PaymentType
+  status         PaymentStatus @default(PENDING)
+  stripePaymentId String?      @unique
+  escrowReleased Boolean       @default(false)
+  processingFee  Decimal?      @db.Decimal(10, 2)
+  netAmount      Decimal?      @db.Decimal(10, 2)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  bountyId   String
+  bounty     Bounty @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User   @relation("PaymentSender", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User   @relation("PaymentReceiver", fields: [receiverId], references: [id])
+
+  @@map("payments")
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      // 1-5 star rating
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  bountyId   String
+  bounty     Bounty @relation(fields: [bountyId], references: [id], onDelete: Cascade)
+  reviewerId String
+  reviewer   User   @relation("ReviewGiver", fields: [reviewerId], references: [id])
+  revieweeId String
+  reviewee   User   @relation("ReviewReceiver", fields: [revieweeId], references: [id])
+
+  @@unique([bountyId, reviewerId, revieweeId])
+  @@map("reviews")
+}
