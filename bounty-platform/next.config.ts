@@ -4,8 +4,71 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig: NextConfig = {
   serverExternalPackages: ['@prisma/client'],
   images: {
-    domains: []
-  }
+    domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com'],
+    formats: ['image/webp', 'image/avif'],
+  },
+  experimental: {
+    optimizePackageImports: ['framer-motion', '@tanstack/react-query'],
+    webVitalsAttribution: ['CLS', 'LCP'],
+  },
+  compress: true,
+  poweredByHeader: false,
+  generateEtags: false,
+  httpAgentOptions: {
+    keepAlive: true,
+  },
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  },
+  productionBrowserSourceMaps: false,
+  optimizeFonts: true,
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error']
+    } : false,
+  },
+  env: {
+    ANALYZE: process.env.ANALYZE,
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload'
+          },
+        ],
+      },
+    ];
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/mp/lib.min.js',
+        destination: 'https://cdn.mxpnl.com/libs/mixpanel-2-latest.min.js',
+      },
+      {
+        source: '/mp/lib.js',
+        destination: 'https://cdn.mxpnl.com/libs/mixpanel-2-latest.js',
+      },
+      {
+        source: '/mp/decide',
+        destination: 'https://decide.mixpanel.com/decide',
+      },
+      {
+        source: '/mp/:slug',
+        destination: 'https://api.mixpanel.com/:slug',
+      },
+    ];
+  },
 };
 
 // Sentry configuration options
