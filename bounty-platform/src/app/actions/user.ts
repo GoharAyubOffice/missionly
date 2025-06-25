@@ -10,13 +10,20 @@ import { getServerConfig } from '@/config';
 
 const prisma = new PrismaClient();
 
-// Configure web-push with VAPID keys
+// Configure web-push with VAPID keys (lazy initialization)
 const config = getServerConfig();
-webpush.setVapidDetails(
-  config.VAPID_SUBJECT,
-  config.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-  config.VAPID_PRIVATE_KEY
-);
+
+function initializeWebPush() {
+  if (config.VAPID_SUBJECT && config.NEXT_PUBLIC_VAPID_PUBLIC_KEY && config.VAPID_PRIVATE_KEY) {
+    webpush.setVapidDetails(
+      config.VAPID_SUBJECT,
+      config.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      config.VAPID_PRIVATE_KEY
+    );
+    return true;
+  }
+  return false;
+}
 
 export async function updateBusinessProfile(data: BusinessProfileData) {
   try {
@@ -485,6 +492,15 @@ export interface SendPushNotificationData {
 
 export async function sendPushNotification(data: SendPushNotificationData) {
   try {
+    // Check if web push is configured
+    if (!initializeWebPush()) {
+      console.warn('Web push not configured, skipping notification');
+      return {
+        success: false,
+        error: 'Web push notifications not configured',
+      };
+    }
+
     // Get user's push subscriptions
     const subscriptions = await prisma.pushSubscription.findMany({
       where: { userId: data.userId },

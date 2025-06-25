@@ -5,10 +5,18 @@ import { getServerConfig } from '@/config';
 
 const prisma = new PrismaClient();
 const config = getServerConfig();
-const resend = new Resend(config.RESEND_API_KEY);
+const resend = config.RESEND_API_KEY ? new Resend(config.RESEND_API_KEY) : null;
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if email service is configured
+    if (!resend || !config.RESEND_FROM_EMAIL) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Email service not configured' 
+      }, { status: 503 });
+    }
+
     // Verify this is a cron request
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

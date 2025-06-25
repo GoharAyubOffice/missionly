@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const configSchema = z.object({
   // Database
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string().min(1),
   
   // Supabase
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -14,13 +14,13 @@ const configSchema = z.object({
   STRIPE_SECRET_KEY: z.string(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   
-  // Email (Resend)
-  RESEND_API_KEY: z.string(),
-  RESEND_FROM_EMAIL: z.string().email(),
+  // Email (Resend) - Optional for development
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().email().optional(),
   
-  // Redis (Upstash)
-  UPSTASH_REDIS_REST_URL: z.string().url(),
-  UPSTASH_REDIS_REST_TOKEN: z.string(),
+  // Redis (Upstash) - Optional for development
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
   
   // Sentry (Optional)
   SENTRY_DSN: z.string().url().optional(),
@@ -33,10 +33,10 @@ const configSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   
-  // Web Push Notifications
-  NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string(),
-  VAPID_PRIVATE_KEY: z.string(),
-  VAPID_SUBJECT: z.string().email(),
+  // Web Push Notifications - Optional for development
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
 });
 
 export type Config = z.infer<typeof configSchema>;

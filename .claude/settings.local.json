@@ -7,7 +7,16 @@
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
       "Bash(npx eslint:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(timeout 15s npm run dev)",
+      "Bash(npm uninstall:*)",
+      "Bash(timeout 20s npm run dev 2>&1)",
+      "Bash(node:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 30s npm run dev)"
     ],
     "deny": []
   }
