@@ -190,6 +190,9 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}):
       
       if (!subscription) {
         // Create new subscription
+        if (!config.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+          throw new Error('VAPID public key is not set');
+        }
         const applicationServerKey = urlBase64ToUint8Array(config.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
         
         subscription = await registration.pushManager.subscribe({

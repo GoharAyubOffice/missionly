@@ -80,8 +80,8 @@ export default function PaymentSettingsPage() {
 
       setState(prev => ({
         ...prev,
-        user: userResult.data,
-        accountStatus: statusResult.data,
+        user: userResult.data ?? null,
+        accountStatus: statusResult.data ?? null,
         loading: false,
         error: null,
       }));

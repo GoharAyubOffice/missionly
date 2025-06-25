@@ -8,7 +8,7 @@ const config = getPublicConfig();
 export const analytics = {
   track: (event: string, properties?: Record<string, any>) => {
     if (typeof window !== 'undefined' && window.va) {
-      window.va('track', event, properties);
+      window.va('track', { event, ...properties });
     }
   },
   
@@ -139,15 +139,13 @@ export const initializeAnalytics = () => {
   if (typeof window === 'undefined') return;
   
   // Initialize Web Vitals tracking
-  if ('web-vitals' in window) {
-    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-      getCLS(trackWebVitals);
-      getFID(trackWebVitals);
-      getFCP(trackWebVitals);
-      getLCP(trackWebVitals);
-      getTTFB(trackWebVitals);
-    });
-  }
+  import('web-vitals').then((webVitals) => {
+    webVitals.onCLS?.(trackWebVitals);
+    webVitals.onFCP?.(trackWebVitals);
+    webVitals.onLCP?.(trackWebVitals);
+    webVitals.onTTFB?.(trackWebVitals);
+    webVitals.onINP?.(trackWebVitals);
+  });
   
   // Track initial page view
   analytics.page();

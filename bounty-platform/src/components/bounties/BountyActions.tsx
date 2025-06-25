@@ -24,7 +24,21 @@ interface BountyActionsProps {
       name: string | null;
       avatar: string | null;
     } | null;
-    applications: any[];
+    applications: Array<{
+      id: string;
+      coverLetter: string | null;
+      proposedBudget: number | null;
+      estimatedDays: number | null;
+      status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
+      createdAt: Date;
+      applicant: {
+        id: string;
+        name: string | null;
+        avatar: string | null;
+        reputation: number;
+      };
+      applicantId?: string;
+    }>;
     _count: {
       applications: number;
       submissions: number;
@@ -261,7 +275,7 @@ export function BountyActions({ bounty, currentUser, className }: BountyActionsP
                   Manage Project
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   className="w-full"
                   onClick={handleStartMessage}
                 >
@@ -349,7 +363,7 @@ export function BountyActions({ bounty, currentUser, className }: BountyActionsP
                   Project Workspace
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   className="w-full"
                   onClick={handleStartMessage}
                 >
@@ -421,8 +435,8 @@ export function BountyActions({ bounty, currentUser, className }: BountyActionsP
       <Modal
         isOpen={showPublishModal}
         onClose={() => setShowPublishModal(false)}
-        title="Publish Bounty"
       >
+        <h2 className="text-xl font-semibold mb-4">Publish Bounty</h2>
         <div className="space-y-4">
           <p className="text-text-secondary">
             Are you ready to publish "<strong>{bounty.title}</strong>"? 
@@ -451,8 +465,8 @@ export function BountyActions({ bounty, currentUser, className }: BountyActionsP
       <Modal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        title="Delete Bounty"
       >
+        <h2 className="text-xl font-semibold mb-4">Delete Bounty</h2>
         <div className="space-y-4">
           <p className="text-text-secondary">
             Are you sure you want to delete "<strong>{bounty.title}</strong>"? 

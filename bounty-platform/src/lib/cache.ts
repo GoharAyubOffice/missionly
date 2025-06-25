@@ -34,6 +34,10 @@ export async function cacheGet<T = any>(
 ): Promise<T | null> {
   try {
     const cacheKey = generateKey(key, options.namespace);
+    if (!redisClient) {
+      console.warn('Redis client is not available.');
+      return null;
+    }
     const value = await redisClient.get(cacheKey);
     
     if (value === null) {
@@ -63,7 +67,10 @@ export async function cacheSet<T = any>(
   try {
     const cacheKey = generateKey(key, options.namespace);
     const serializedValue = typeof value === 'string' ? value : JSON.stringify(value);
-    
+    if (!redisClient) {
+      console.warn('Redis client is not available.');
+      return false;
+    }
     let result;
     
     if (options.ttl && options.nx) {
@@ -95,6 +102,10 @@ export async function cacheDel(
 ): Promise<boolean> {
   try {
     const cacheKey = generateKey(key, options.namespace);
+    if (!redisClient) {
+      console.warn('Redis client is not available.');
+      return false;
+    }
     const result = await redisClient.del(cacheKey);
     return result > 0;
   } catch (error) {
@@ -112,6 +123,10 @@ export async function cacheExists(
 ): Promise<boolean> {
   try {
     const cacheKey = generateKey(key, options.namespace);
+    if (!redisClient) {
+      console.warn('Redis client is not available.');
+      return false;
+    }
     const result = await redisClient.exists(cacheKey);
     return result > 0;
   } catch (error) {
@@ -130,6 +145,10 @@ export async function cacheExpire(
 ): Promise<boolean> {
   try {
     const cacheKey = generateKey(key, options.namespace);
+    if (!redisClient) {
+      console.warn('Redis client is not available.');
+      return false;
+    }
     const result = await redisClient.expire(cacheKey, ttl);
     return result === 1;
   } catch (error) {
@@ -147,6 +166,10 @@ export async function cacheTTL(
 ): Promise<number> {
   try {
     const cacheKey = generateKey(key, options.namespace);
+    if (!redisClient) {
+      console.warn('Redis client is not available.');
+      return -1;
+    }
     return await redisClient.ttl(cacheKey);
   } catch (error) {
     console.error('Cache TTL error:', error);
@@ -163,6 +186,10 @@ export async function cacheDelPattern(
 ): Promise<number> {
   try {
     const cachePattern = generateKey(pattern, options.namespace);
+    if (!redisClient) {
+      console.warn('Redis client is not available.');
+      return 0;
+    }
     const keys = await redisClient.keys(cachePattern);
     
     if (keys.length === 0) {
@@ -185,6 +212,10 @@ export async function cacheIncr(
 ): Promise<number> {
   try {
     const cacheKey = generateKey(key, options.namespace);
+    if (!redisClient) {
+      console.warn('Redis client is not available.');
+      return 0;
+    }
     return await redisClient.incr(cacheKey);
   } catch (error) {
     console.error('Cache increment error:', error);
@@ -201,6 +232,10 @@ export async function cacheDecr(
 ): Promise<number> {
   try {
     const cacheKey = generateKey(key, options.namespace);
+    if (!redisClient) {
+      console.warn('Redis client is not available.');
+      return 0;
+    }
     return await redisClient.decr(cacheKey);
   } catch (error) {
     console.error('Cache decrement error:', error);
@@ -330,6 +365,13 @@ export async function getCacheStats(): Promise<{
   hitRate?: number;
 }> {
   try {
+    if (!redisClient) {
+      console.warn('Redis client is not available.');
+      return {
+        totalKeys: 0,
+        memoryUsage: 'Error',
+      };
+    }
     const keys = await redisClient.dbsize();
     
     return {

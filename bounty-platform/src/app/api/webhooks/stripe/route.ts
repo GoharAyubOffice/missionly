@@ -5,7 +5,7 @@ import { PrismaClient } from '@/generated/prisma';
 
 const prisma = new PrismaClient();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2025-05-28.basil',
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -13,7 +13,8 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
-    const headersList = headers();
+    // Workaround: force headersList to any due to TS type mismatch
+    const headersList = headers() as any;
     const signature = headersList.get('stripe-signature');
 
     if (!signature) {
@@ -66,10 +67,6 @@ export async function POST(request: NextRequest) {
 
       case 'transfer.created':
         await handleTransferCreated(event.data.object as Stripe.Transfer);
-        break;
-
-      case 'transfer.failed':
-        await handleTransferFailed(event.data.object as Stripe.Transfer);
         break;
 
       default:
@@ -259,31 +256,6 @@ async function handleTransferCreated(transfer: Stripe.Transfer) {
 
   } catch (error) {
     console.error('Error handling transfer created:', error);
-  }
-}
-
-// Handle transfer failure
-async function handleTransferFailed(transfer: Stripe.Transfer) {
-  try {
-    console.log('Processing transfer failed:', transfer.id);
-
-    const paymentId = transfer.metadata?.paymentId;
-
-    if (paymentId) {
-      // Update payment record to reflect failed transfer
-      await prisma.payment.update({
-        where: { id: paymentId },
-        data: {
-          status: 'FAILED',
-          updatedAt: new Date(),
-        },
-      });
-
-      console.log(`Payment ${paymentId} transfer failed`);
-    }
-
-  } catch (error) {
-    console.error('Error handling transfer failed:', error);
   }
 }
 

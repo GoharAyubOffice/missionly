@@ -26,7 +26,7 @@ export default async function BountyDetailPage({ params }: BountyDetailPageProps
   }
 
   const bounty = bountyResult.data;
-  const currentUser = userResult.success ? userResult.data : null;
+  const currentUser = userResult && userResult.success && userResult.data ? userResult.data : null;
 
   return (
     <div className="min-h-screen bg-background-secondary">
@@ -46,7 +46,14 @@ export default async function BountyDetailPage({ params }: BountyDetailPageProps
 
         {/* Main content */}
         <BountyDetailView 
-          bounty={bounty}
+          bounty={{
+            ...bounty,
+            budget: Number(bounty.budget),
+            applications: bounty.applications.map(app => ({
+              ...app,
+              proposedBudget: app.proposedBudget !== null ? Number(app.proposedBudget) : null,
+            })),
+          }}
           currentUser={currentUser}
         />
       </div>

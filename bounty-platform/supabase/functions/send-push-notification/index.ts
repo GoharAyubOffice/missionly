@@ -1,15 +1,58 @@
+// @ts-ignore: Deno/Edge import, not available in local TS
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+// @ts-ignore: Deno/Edge import, not available in local TS
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+// @ts-ignore: Deno/Edge import, not available in local TS
 import 'https://deno.land/x/xhr@0.3.0/mod.ts';
 
-// Initialize Supabase client
+// Polyfill for atob/btoa in Deno Deploy and some Deno environments
+if (typeof atob === 'undefined') {
+  // @ts-ignore
+  globalThis.atob = (input) => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+    let str = input.replace(/=+$/, '');
+    let output = '';
+    if (str.length % 4 === 1) throw new Error('Invalid base64 string');
+    for (
+      let bc = 0, bs = 0, buffer, i = 0;
+      (buffer = str.charAt(i++));
+      ~buffer && (bs = bc % 4 ? bs * 64 + buffer : buffer, bc++ % 4)
+        ? output += String.fromCharCode(255 & (bs >> ((-2 * bc) & 6)))
+        : 0
+    ) {
+      buffer = chars.indexOf(buffer);
+    }
+    return output;
+  };
+}
+if (typeof btoa === 'undefined') {
+  // @ts-ignore
+  globalThis.btoa = (input) => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+    let str = input;
+    let output = '';
+    for (let block = 0, charCode, i = 0, map = chars;
+      str.charAt(i | 0) || (map = '=', i % 1);
+      output += map.charAt(63 & (block >> (8 - (i % 1) * 8)))
+    ) {
+      charCode = str.charCodeAt(i += 3 / 4);
+      if (charCode > 0xFF) throw new Error('btoa: The string to be encoded contains characters outside of the Latin1 range.');
+      block = (block << 8) | charCode;
+    }
+    return output;
+  };
+}
+
+// @ts-ignore: Deno global is available in Deno Deploy/Edge
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+// @ts-ignore: Deno global is available in Deno Deploy/Edge
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-// VAPID configuration
+// @ts-ignore: Deno global is available in Deno Deploy/Edge
 const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY')!;
+// @ts-ignore: Deno global is available in Deno Deploy/Edge
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!;
+// @ts-ignore: Deno global is available in Deno Deploy/Edge
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT')!;
 
 interface PushNotificationPayload {
@@ -97,7 +140,7 @@ async function generateVapidJWT(): Promise<string> {
 
 // Function to send push notification
 async function sendPushToEndpoint(
-  subscription: any,
+  subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
   payload: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -123,13 +166,16 @@ async function sendPushToEndpoint(
       console.error('Push notification failed:', response.status, errorText);
       return { success: false, error: `HTTP ${response.status}: ${errorText}` };
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error sending push notification:', error);
-    return { success: false, error: error.message };
+    if (typeof error === 'object' && error && 'message' in error) {
+      return { success: false, error: (error as any).message };
+    }
+    return { success: false, error: String(error) };
   }
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -218,7 +264,7 @@ serve(async (req) => {
 
     // Send notifications to all user's subscriptions
     const results = await Promise.allSettled(
-      subscriptions.map(async (subscription) => {
+      subscriptions.map(async (subscription: { endpoint: string; p256dh: string; auth: string }) => {
         const pushSubscription = {
           endpoint: subscription.endpoint,
           keys: {
@@ -242,7 +288,7 @@ serve(async (req) => {
     );
 
     const successful = results.filter(
-      (result) => result.status === 'fulfilled' && result.value.success
+      (result: PromiseSettledResult<{ success: boolean }>) => result.status === 'fulfilled' && result.value.success
     ).length;
 
     const total = results.length;
@@ -277,12 +323,18 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Edge function error:', error);
+    let message = 'Unknown error';
+    if (typeof error === 'object' && error && 'message' in error) {
+      message = (error as any).message;
+    } else if (typeof error === 'string') {
+      message = error;
+    }
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
-        details: error.message 
+        details: message
       }),
       { 
         status: 500, 

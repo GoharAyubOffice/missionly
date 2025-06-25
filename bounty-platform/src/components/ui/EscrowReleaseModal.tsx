@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Modal } from './Modal';
+import { Modal, ModalHeader, ModalTitle, ModalContent } from './Modal';
 import { Button } from './Button';
 import { cn } from '@/lib/utils';
 
@@ -64,10 +64,14 @@ export function EscrowReleaseModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Release Escrow Payment"
+      size="lg"
       className={className}
     >
-      <div className="space-y-6">
+      <ModalHeader>
+        <ModalTitle>Release Escrow Payment</ModalTitle>
+      </ModalHeader>
+      <ModalContent>
+        <div className="space-y-6">
         {/* Warning Header */}
         <div className="bg-accent-orange/10 border border-accent-orange/20 rounded-lg p-4">
           <div className="flex items-start gap-3">
@@ -239,7 +243,8 @@ export function EscrowReleaseModal({
             satisfactorily and agree to transfer the funds to the freelancer.
           </p>
         </div>
-      </div>
+        </div>
+      </ModalContent>
     </Modal>
   );
 }

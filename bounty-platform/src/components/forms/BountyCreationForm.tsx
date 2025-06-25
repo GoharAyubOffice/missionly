@@ -225,6 +225,7 @@ const StepIndicator: React.FC<{ currentStep: FormStepId; completedSteps: Set<For
 export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreationFormProps) {
   const [createdBountyId, setCreatedBountyId] = useState<string | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   
   const {
     formData,
@@ -252,8 +253,8 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
     setValue,
     formState: { errors },
     trigger,
-  } = useForm<BountyCreationFormData>({
-    resolver: zodResolver(currentStepData.schema),
+  } = useForm<Partial<BountyCreationFormData>>({
+    resolver: zodResolver(currentStepData.schema as any),
     defaultValues: formData,
     mode: 'onBlur',
   });
@@ -261,7 +262,11 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
   const watchedValues = watch();
 
   React.useEffect(() => {
-    updateFormData(watchedValues);
+    const timeoutId = setTimeout(() => {
+      updateFormData(watchedValues);
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, [watchedValues, updateFormData]);
 
   const validateCurrentStep = async () => {
@@ -310,12 +315,14 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
           setCreatedBountyId(result.bountyId);
           markStepComplete(currentStep);
           setCurrentStep('payment');
+          setSubmissionError(null);
         } else {
-          console.error('Bounty creation failed:', result.error);
+          setSubmissionError(result.error || 'Failed to create bounty. Please try again.');
         }
       }
     } catch (error) {
       console.error('Form submission error:', error);
+      setSubmissionError('An unexpected error occurred. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -328,7 +335,7 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
   };
 
   const isLastStep = currentStepIndex === FORM_STEPS.length - 1;
-  const canProceed = completedSteps.has(currentStep) || Object.keys(errors).length === 0;
+  const canProceed = Object.keys(errors).length === 0;
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -381,7 +388,9 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
                       placeholder="Describe your project in detail. Include the goals, scope, and any specific requirements..."
                     />
                     {errors.description && (
-                      <p className="text-body-small text-error mt-1">{errors.description.message}</p>
+                      <p className="text-body-small text-error mt-1">
+                        {errors.description.message}
+                      </p>
                     )}
                     <p className="text-body-small text-text-secondary mt-1">
                       Provide a comprehensive description to attract the right talent
@@ -399,7 +408,9 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
                       maxTags={10}
                     />
                     {errors.tags && (
-                      <p className="text-body-small text-error mt-1">{errors.tags.message}</p>
+                      <p className="text-body-small text-error mt-1">
+                        {errors.tags.message}
+                      </p>
                     )}
                   </div>
                 </>
@@ -419,7 +430,9 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
                       label="requirements"
                     />
                     {errors.requirements && (
-                      <p className="text-body-small text-error mt-1">{errors.requirements.message}</p>
+                      <p className="text-body-small text-error mt-1">
+                        {errors.requirements.message}
+                      </p>
                     )}
                   </div>
 
@@ -434,7 +447,9 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
                       maxTags={15}
                     />
                     {errors.skills && (
-                      <p className="text-body-small text-error mt-1">{errors.skills.message}</p>
+                      <p className="text-body-small text-error mt-1">
+                        {errors.skills.message}
+                      </p>
                     )}
                   </div>
                 </>
@@ -458,7 +473,7 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
                   />
 
                   <Input
-                    {...register('deadline', { valueAsDate: true })}
+                    {...register('deadline')}
                     label="Deadline (Optional)"
                     type="date"
                     min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
@@ -493,7 +508,9 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
                       ))}
                     </div>
                     {errors.priority && (
-                      <p className="text-body-small text-error mt-2">{errors.priority.message}</p>
+                      <p className="text-body-small text-error mt-2">
+                        {errors.priority.message}
+                      </p>
                     )}
                   </div>
                 </>
@@ -604,6 +621,18 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
               )}
             </motion.div>
           </AnimatePresence>
+
+          {/* Error message display */}
+          {submissionError && (
+            <div className="bg-error/10 border border-error/20 rounded-button p-4 mb-6">
+              <div className="flex items-center space-x-2">
+                <svg className="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <p className="text-error font-medium">{submissionError}</p>
+              </div>
+            </div>
+          )}
 
           {/* Navigation buttons - hide during payment step and after completion */}
           {currentStep !== 'payment' && !paymentCompleted && (
