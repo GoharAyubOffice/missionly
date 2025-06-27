@@ -18,6 +18,10 @@ interface BountyCreationState {
   // Loading state
   isSubmitting: boolean;
   
+  // Draft state
+  isDraft: boolean;
+  draftId: string | null;
+  
   // Actions
   updateFormData: (data: Partial<BountyCreationFormData>) => void;
   setCurrentStep: (step: FormStepId) => void;
@@ -27,6 +31,9 @@ interface BountyCreationState {
   clearStepErrors: () => void;
   setSubmitting: (isSubmitting: boolean) => void;
   resetForm: () => void;
+  saveDraft: () => void;
+  loadDraft: (draftId: string) => void;
+  clearDraft: () => void;
   canNavigateToStep: (step: FormStepId) => boolean;
 }
 
@@ -43,6 +50,8 @@ const initialState = {
   completedSteps: new Set<FormStepId>(),
   stepErrors: {},
   isSubmitting: false,
+  isDraft: false,
+  draftId: null,
 };
 
 export const useBountyCreationStore = create<BountyCreationState>()(
@@ -87,10 +96,33 @@ export const useBountyCreationStore = create<BountyCreationState>()(
           isSubmitting,
         })),
       
-      resetForm: () =>
+      resetForm: () => {
+        // Clear localStorage first
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('bounty-creation-form');
+        }
         set(() => ({
           ...initialState,
           completedSteps: new Set(),
+        }));
+      },
+      
+      saveDraft: () =>
+        set(() => ({
+          isDraft: true,
+          draftId: `draft-${Date.now()}`,
+        })),
+      
+      loadDraft: (draftId) =>
+        set(() => ({
+          isDraft: true,
+          draftId,
+        })),
+      
+      clearDraft: () =>
+        set(() => ({
+          isDraft: false,
+          draftId: null,
         })),
       
       canNavigateToStep: (step) => {
@@ -120,11 +152,13 @@ export const useBountyCreationStore = create<BountyCreationState>()(
         formData: state.formData,
         currentStep: state.currentStep,
         completedSteps: Array.from(state.completedSteps),
+        isDraft: state.isDraft,
+        draftId: state.draftId,
       }),
-      merge: (persistedState: any, currentState) => ({
+      merge: (persistedState: unknown, currentState) => ({
         ...currentState,
-        ...persistedState,
-        completedSteps: new Set(persistedState?.completedSteps || []),
+        ...(persistedState as object),
+        completedSteps: new Set((persistedState as any)?.completedSteps || []),
       }),
     }
   )

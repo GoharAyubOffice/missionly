@@ -174,3 +174,51 @@ export async function forgotPasswordAction(email: string) {
     };
   }
 }
+
+export async function signInWithGoogleAction(role?: 'CLIENT' | 'FREELANCER') {
+  try {
+    const supabase = await createSupabaseServerClient();
+    
+    let redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`;
+    if (role) {
+      redirectTo += `?role=${role}`;
+    }
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+        scopes: 'openid email profile',
+        skipBrowserRedirect: false,
+      },
+    });
+
+    if (error) {
+      console.error('Google OAuth error:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    if (data.url) {
+      // Use redirect from Next.js for server actions
+      redirect(data.url);
+    }
+
+    return {
+      success: false,
+      error: 'Failed to initiate Google OAuth.',
+    };
+  } catch (error) {
+    console.error('Google OAuth action error:', error);
+    return {
+      success: false,
+      error: 'An unexpected error occurred during Google authentication.',
+    };
+  }
+}

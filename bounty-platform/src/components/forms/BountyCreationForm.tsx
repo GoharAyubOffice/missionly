@@ -307,17 +307,47 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
       // If we're on the additional-settings step, create the bounty
       if (currentStep === 'additional-settings') {
         const fullData = { ...formData, ...data };
-        const validatedData = bountyCreationSchema.parse(fullData);
         
-        const result = await onSubmit(validatedData);
-        
-        if (result.success && result.bountyId) {
-          setCreatedBountyId(result.bountyId);
-          markStepComplete(currentStep);
-          setCurrentStep('payment');
-          setSubmissionError(null);
-        } else {
-          setSubmissionError(result.error || 'Failed to create bounty. Please try again.');
+        // Validate all required fields are present
+        try {
+          const validatedData = bountyCreationSchema.parse(fullData);
+          
+          const result = await onSubmit(validatedData);
+          
+          if (result.success && result.bountyId) {
+            setCreatedBountyId(result.bountyId);
+            markStepComplete(currentStep);
+            setCurrentStep('payment');
+            setSubmissionError(null);
+          } else {
+            setSubmissionError(result.error || 'Failed to create bounty. Please try again.');
+          }
+        } catch (validationError: any) {
+          console.error('Validation error:', validationError);
+          if (validationError?.errors && Array.isArray(validationError.errors)) {
+            // Find which step has the missing fields
+            const missingFields = validationError.errors.map((err: any) => err.path?.[0]).filter(Boolean);
+            const hasBasicInfoError = missingFields.some((field: string) => ['title', 'description', 'tags'].includes(field));
+            const hasRequirementsError = missingFields.some((field: string) => ['requirements', 'skills'].includes(field));
+            const hasBudgetError = missingFields.some((field: string) => ['budget', 'priority'].includes(field));
+            
+            if (hasBasicInfoError) {
+              setSubmissionError('Please complete the basic information (title, description, tags).');
+              setCurrentStep('basic-info');
+            } else if (hasRequirementsError) {
+              setSubmissionError('Please complete the requirements and skills.');
+              setCurrentStep('requirements');
+            } else if (hasBudgetError) {
+              setSubmissionError('Please complete the budget and priority settings.');
+              setCurrentStep('budget-timeline');
+            } else {
+              setSubmissionError('Please complete all required fields in previous steps.');
+              setCurrentStep('basic-info');
+            }
+          } else {
+            setSubmissionError('Please complete all required fields in previous steps.');
+            setCurrentStep('basic-info');
+          }
         }
       }
     } catch (error) {
@@ -458,7 +488,13 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
               {currentStep === 'budget-timeline' && (
                 <>
                   <Input
-                    {...register('budget', { valueAsNumber: true })}
+                    {...register('budget', { 
+                      valueAsNumber: true,
+                      setValueAs: (value) => {
+                        const num = parseFloat(value);
+                        return isNaN(num) ? undefined : num;
+                      }
+                    })}
                     label="Budget (USD)"
                     type="number"
                     min="10"
@@ -473,7 +509,13 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
                   />
 
                   <Input
-                    {...register('deadline')}
+                    {...register('deadline', {
+                      setValueAs: (value) => {
+                        if (!value) return undefined;
+                        const date = new Date(value);
+                        return isNaN(date.getTime()) ? undefined : date;
+                      }
+                    })}
                     label="Deadline (Optional)"
                     type="date"
                     min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
@@ -486,26 +528,35 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
                       Priority Level
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {(['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const).map((priority) => (
-                        <label
-                          key={priority}
-                          className={cn(
-                            'relative flex items-center justify-center p-4 border-2 rounded-button cursor-pointer transition-all duration-200',
-                            'hover:border-primary-blue focus-within:border-primary-blue focus-within:ring-2 focus-within:ring-primary-blue focus-within:ring-offset-2',
-                            errors.priority ? 'border-error' : 'border-border'
-                          )}
-                        >
-                          <input
-                            {...register('priority')}
-                            type="radio"
-                            value={priority}
-                            className="sr-only"
-                          />
-                          <div className="text-center">
-                            <span className="font-medium text-text-primary">{priority}</span>
-                          </div>
-                        </label>
-                      ))}
+                      {(['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as const).map((priority) => {
+                        const isSelected = watchedValues.priority === priority;
+                        return (
+                          <label
+                            key={priority}
+                            className={cn(
+                              'relative flex items-center justify-center p-4 border-2 rounded-button cursor-pointer transition-all duration-200',
+                              'hover:border-primary-blue focus-within:border-primary-blue focus-within:ring-2 focus-within:ring-primary-blue focus-within:ring-offset-2',
+                              isSelected ? 'border-primary-blue bg-primary-blue/10' : 'border-border',
+                              errors.priority ? 'border-error' : ''
+                            )}
+                          >
+                            <input
+                              {...register('priority')}
+                              type="radio"
+                              value={priority}
+                              className="sr-only"
+                            />
+                            <div className="text-center">
+                              <span className={cn(
+                                'font-medium',
+                                isSelected ? 'text-primary-blue' : 'text-text-primary'
+                              )}>
+                                {priority}
+                              </span>
+                            </div>
+                          </label>
+                        );
+                      })}
                     </div>
                     {errors.priority && (
                       <p className="text-body-small text-error mt-2">
@@ -637,14 +688,36 @@ export function BountyCreationForm({ onSubmit, isLoading = false }: BountyCreati
           {/* Navigation buttons - hide during payment step and after completion */}
           {currentStep !== 'payment' && !paymentCompleted && (
             <div className="flex items-center justify-between pt-6 border-t border-border">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={goToPreviousStep}
-                disabled={currentStepIndex === 0}
-              >
-                Previous
-              </Button>
+              <div className="flex space-x-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={goToPreviousStep}
+                  disabled={currentStepIndex === 0}
+                >
+                  Previous
+                </Button>
+                
+                {currentStep !== 'basic-info' && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      // Save current progress as draft
+                      const draftData = { ...formData, ...watchedValues };
+                      localStorage.setItem('bounty-draft', JSON.stringify({
+                        data: draftData,
+                        step: currentStep,
+                        timestamp: Date.now()
+                      }));
+                      // Show toast notification (you can add a toast system)
+                      alert('Draft saved! You can resume this bounty later.');
+                    }}
+                  >
+                    Save Draft
+                  </Button>
+                )}
+              </div>
 
               <div className="flex space-x-3">
                 {currentStep === 'additional-settings' ? (

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { LoginForm } from '@/components/forms/LoginForm';
 import { loginAction, forgotPasswordAction } from '@/app/actions/auth';
+import { signInWithGoogle } from '@/lib/auth-client';
 import { type LoginFormData } from '@/lib/validators/auth';
 
 export default function LoginPage() {
@@ -15,12 +16,34 @@ export default function LoginPage() {
 
   useEffect(() => {
     const message = searchParams.get('message');
+    const errorParam = searchParams.get('error');
+    
     if (message === 'registration-success') {
       setSuccessMessage('Registration successful! Please check your email to verify your account, then log in.');
     } else if (message === 'verification-success') {
       setSuccessMessage('Email verified successfully! You can now log in to your account.');
     } else if (message === 'password-reset') {
       setSuccessMessage('Password reset successfully! You can now log in with your new password.');
+    } else if (errorParam) {
+      switch (errorParam) {
+        case 'oauth-cancelled':
+          setError('Google sign-in was cancelled. Please try again.');
+          break;
+        case 'oauth-error':
+          setError('Google sign-in failed. Please try again or use email/password.');
+          break;
+        case 'auth-error':
+          setError('Authentication failed. Please try again.');
+          break;
+        case 'profile-creation-failed':
+          setError('Failed to create user profile. Please contact support.');
+          break;
+        case 'no-code':
+          setError('Authentication failed. Please try again.');
+          break;
+        default:
+          setError('An authentication error occurred. Please try again.');
+      }
     }
   }, [searchParams]);
 
@@ -57,6 +80,22 @@ export default function LoginPage() {
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
       console.error('Forgot password error:', err);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await signInWithGoogle();
+      // User will be redirected by the OAuth flow
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred during Google sign-in.';
+      setError(errorMessage);
+      console.error('Google sign-in error:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -97,6 +136,7 @@ export default function LoginPage() {
         onSubmit={handleSubmit} 
         isLoading={isLoading}
         onForgotPassword={handleForgotPassword}
+        onGoogleSignIn={handleGoogleSignIn}
       />
     </div>
   );

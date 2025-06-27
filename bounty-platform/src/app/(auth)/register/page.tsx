@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { RegistrationForm } from '@/components/forms/RegistrationForm';
 import { registrationAction } from '@/app/actions/auth';
+import { signInWithGoogle } from '@/lib/auth-client';
 import { type RegistrationFormData } from '@/lib/validators/auth';
 
 export default function RegisterPage() {
@@ -30,6 +31,22 @@ export default function RegisterPage() {
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
       console.error('Registration error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async (role: 'CLIENT' | 'FREELANCER') => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await signInWithGoogle(role);
+      // User will be redirected by the OAuth flow
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred during Google sign-up.';
+      setError(errorMessage);
+      console.error('Google sign-up error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +97,11 @@ export default function RegisterPage() {
         </div>
       )}
 
-      <RegistrationForm onSubmit={handleSubmit} isLoading={isLoading} />
+      <RegistrationForm 
+        onSubmit={handleSubmit} 
+        isLoading={isLoading} 
+        onGoogleSignUp={handleGoogleSignUp}
+      />
     </div>
   );
 }
