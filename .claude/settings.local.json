@@ -16,7 +16,9 @@
       "Bash(timeout 20s npm run dev 2>&1)",
       "Bash(node:*)",
       "Bash(npm run dev:*)",
-      "Bash(timeout 30s npm run dev)"
+      "Bash(timeout 30s npm run dev)",
+      "Bash(ls:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

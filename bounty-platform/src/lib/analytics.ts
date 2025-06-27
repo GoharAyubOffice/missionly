@@ -1,8 +1,6 @@
 // Analytics and monitoring utilities
 
-import { getPublicConfig } from '@/config';
-
-const config = getPublicConfig();
+import { clientConfig } from '@/config/client';
 
 // Vercel Analytics (built-in)
 export const analytics = {

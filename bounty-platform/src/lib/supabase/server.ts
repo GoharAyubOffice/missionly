@@ -1,14 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { getServerConfig } from '@/config';
+import { serverConfig } from '@/config/server';
 
 export async function createSupabaseServerClient() {
-  const config = getServerConfig();
   const cookieStore = await cookies();
 
   return createServerClient(
-    config.NEXT_PUBLIC_SUPABASE_URL,
-    config.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    serverConfig.NEXT_PUBLIC_SUPABASE_URL,
+    serverConfig.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
@@ -32,11 +31,9 @@ export async function createSupabaseServerClient() {
 
 // For use in API routes and server actions
 export async function createSupabaseServiceClient() {
-  const config = getServerConfig();
-  
   return createServerClient(
-    config.NEXT_PUBLIC_SUPABASE_URL,
-    config.SUPABASE_SERVICE_ROLE_KEY,
+    serverConfig.NEXT_PUBLIC_SUPABASE_URL,
+    serverConfig.SUPABASE_SERVICE_ROLE_KEY,
     {
       cookies: {
         getAll: () => [],

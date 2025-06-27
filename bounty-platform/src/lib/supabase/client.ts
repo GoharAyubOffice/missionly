@@ -1,11 +1,16 @@
 import { createBrowserClient } from '@supabase/ssr';
-import { getPublicConfig } from '@/config';
-
-const config = getPublicConfig();
+import { clientConfig } from '@/config/client';
 
 export const supabase = createBrowserClient(
-  config.NEXT_PUBLIC_SUPABASE_URL,
-  config.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  clientConfig.NEXT_PUBLIC_SUPABASE_URL,
+  clientConfig.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
+
+export function createSupabaseClient() {
+  return createBrowserClient(
+    clientConfig.NEXT_PUBLIC_SUPABASE_URL,
+    clientConfig.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
 
 export type SupabaseClient = typeof supabase;

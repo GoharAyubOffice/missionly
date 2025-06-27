@@ -6,19 +6,17 @@ import { PrismaClient } from '@/generated/prisma';
 import { type BusinessProfileData } from '@/components/forms/BusinessProfileForm';
 import { type MarketerProfileData } from '@/components/forms/MarketerProfileForm';
 import webpush from 'web-push';
-import { getServerConfig } from '@/config';
+import { serverConfig } from '@/config/server';
 
 const prisma = new PrismaClient();
 
 // Configure web-push with VAPID keys (lazy initialization)
-const config = getServerConfig();
-
 function initializeWebPush() {
-  if (config.VAPID_SUBJECT && config.NEXT_PUBLIC_VAPID_PUBLIC_KEY && config.VAPID_PRIVATE_KEY) {
+  if (serverConfig.VAPID_SUBJECT && serverConfig.NEXT_PUBLIC_VAPID_PUBLIC_KEY && serverConfig.VAPID_PRIVATE_KEY) {
     webpush.setVapidDetails(
-      config.VAPID_SUBJECT,
-      config.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-      config.VAPID_PRIVATE_KEY
+      serverConfig.VAPID_SUBJECT,
+      serverConfig.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      serverConfig.VAPID_PRIVATE_KEY
     );
     return true;
   }

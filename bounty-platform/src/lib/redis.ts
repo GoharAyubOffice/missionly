@@ -1,17 +1,15 @@
 import { Redis } from '@upstash/redis';
-import { getServerConfig } from '@/config';
+import { serverConfig } from '@/config/server';
 
 let redis: Redis | null = null;
 
 export function getRedisClient(): Redis | null {
   if (!redis) {
-    const config = getServerConfig();
-    
     // Only create Redis client if credentials are available
-    if (config.UPSTASH_REDIS_REST_URL && config.UPSTASH_REDIS_REST_TOKEN) {
+    if (serverConfig.UPSTASH_REDIS_REST_URL && serverConfig.UPSTASH_REDIS_REST_TOKEN) {
       redis = new Redis({
-        url: config.UPSTASH_REDIS_REST_URL,
-        token: config.UPSTASH_REDIS_REST_TOKEN,
+        url: serverConfig.UPSTASH_REDIS_REST_URL,
+        token: serverConfig.UPSTASH_REDIS_REST_TOKEN,
       });
     }
   }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getPublicConfig } from '@/config';
+import { clientConfig } from '@/config/client';
 
 export interface PushNotificationPermission {
   state: NotificationPermission;
@@ -27,8 +27,6 @@ export interface UsePushNotificationsReturn {
   isSubscribed: boolean;
   error: string | null;
 }
-
-const config = getPublicConfig();
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -190,10 +188,10 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}):
       
       if (!subscription) {
         // Create new subscription
-        if (!config.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+        if (!clientConfig.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
           throw new Error('VAPID public key is not set');
         }
-        const applicationServerKey = urlBase64ToUint8Array(config.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+        const applicationServerKey = urlBase64ToUint8Array(clientConfig.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
         
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
@@ -244,7 +242,7 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}):
     } finally {
       setIsLoading(false);
     }
-  }, [permission.supported, permission.state, config.NEXT_PUBLIC_VAPID_PUBLIC_KEY, onSubscriptionChange, onError, userContext]);
+  }, [permission.supported, permission.state, clientConfig.NEXT_PUBLIC_VAPID_PUBLIC_KEY, onSubscriptionChange, onError, userContext]);
 
   // Unsubscribe from push notifications
   const unsubscribe = useCallback(async (): Promise<boolean> => {

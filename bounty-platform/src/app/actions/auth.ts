@@ -4,9 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { registrationSchema, loginSchema, type RegistrationFormData, type LoginFormData } from '@/lib/validators/auth';
-import { PrismaClient } from '@/generated/prisma';
-
-const prisma = new PrismaClient();
+import { createUserProfile } from '@/lib/createUser';
 
 export async function registrationAction(formData: RegistrationFormData) {
   try {
@@ -23,6 +21,7 @@ export async function registrationAction(formData: RegistrationFormData) {
           name,
           role,
         },
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
       },
     });
 
@@ -43,34 +42,13 @@ export async function registrationAction(formData: RegistrationFormData) {
       };
     }
 
-    try {
-      const userRole = role === 'CLIENT' ? 'CLIENT' : 'FREELANCER';
-      
-      await prisma.user.create({
-        data: {
-          id: authData.user.id,
-          email: email.toLowerCase(),
-          name,
-          role: userRole,
-          supabaseId: authData.user.id,
-          status: 'PENDING_VERIFICATION',
-        },
-      });
+    // Create user profile with metadata
+    await createUserProfile(authData.user.id, email, name, role);
 
-      return {
-        success: true,
-        message: 'Account created successfully. Please check your email to verify your account.',
-      };
-    } catch (dbError) {
-      console.error('Database error:', dbError);
-      
-      await supabase.auth.admin.deleteUser(authData.user.id);
-      
-      return {
-        success: false,
-        error: 'Failed to create user profile. Please try again.',
-      };
-    }
+    return {
+      success: true,
+      message: 'Account created successfully. Please check your email to verify your account.',
+    };
   } catch (error) {
     console.error('Registration error:', error);
     return {
@@ -109,45 +87,22 @@ export async function loginAction(formData: LoginFormData) {
       };
     }
 
-    try {
-      const user = await prisma.user.findUnique({
-        where: { supabaseId: data.user.id },
-      });
-
-      if (!user) {
-        return {
-          success: false,
-          error: 'User profile not found. Please contact support.',
-        };
-      }
-
-      if (user.status === 'SUSPENDED') {
-        await supabase.auth.signOut();
-        return {
-          success: false,
-          error: 'Your account has been suspended. Please contact support.',
-        };
-      }
-
-      if (user.status === 'PENDING_VERIFICATION') {
-        return {
-          success: false,
-          error: 'Please verify your email address before logging in.',
-        };
-      }
-
-      revalidatePath('/', 'layout');
-      return {
-        success: true,
-        redirectTo: user.role === 'CLIENT' ? '/dashboard/client' : '/dashboard/freelancer',
-      };
-    } catch (dbError) {
-      console.error('Database error during login:', dbError);
+    if (!data.user.email_confirmed_at) {
       return {
         success: false,
-        error: 'Failed to retrieve user information. Please try again.',
+        error: 'Please verify your email address before logging in.',
       };
     }
+
+    revalidatePath('/', 'layout');
+    
+    const userRole = data.user.user_metadata?.role || 'CLIENT';
+    const redirectTo = userRole === 'CLIENT' ? '/dashboard/client' : '/dashboard/freelancer';
+    
+    return {
+      success: true,
+      redirectTo,
+    };
   } catch (error) {
     console.error('Login action error:', error);
     return {

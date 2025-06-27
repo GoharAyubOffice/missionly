@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@/generated/prisma';
 import { Resend } from 'resend';
-import { getServerConfig } from '@/config';
+import { serverConfig } from '@/config/server';
 
 const prisma = new PrismaClient();
-const config = getServerConfig();
-const resend = config.RESEND_API_KEY ? new Resend(config.RESEND_API_KEY) : null;
+const resend = serverConfig.RESEND_API_KEY ? new Resend(serverConfig.RESEND_API_KEY) : null;
 
 export async function GET(request: NextRequest) {
   try {
     // Check if email service is configured
-    if (!resend || !config.RESEND_FROM_EMAIL) {
+    if (!resend || !serverConfig.RESEND_FROM_EMAIL) {
       return NextResponse.json({ 
         success: false, 
         error: 'Email service not configured' 
@@ -119,7 +118,7 @@ export async function GET(request: NextRequest) {
 
         if (digestContent) {
           await resend.emails.send({
-            from: config.RESEND_FROM_EMAIL,
+            from: serverConfig.RESEND_FROM_EMAIL,
             to: user.email,
             subject: `Your Weekly Bounty Platform Digest`,
             html: generateDigestEmail(user, digestContent),
@@ -183,7 +182,7 @@ function generateDigestEmail(user: any, content: any): string {
           </div>
           
           <p>
-            <a href="${config.NEXT_PUBLIC_APP_URL}/dashboard" 
+            <a href="${serverConfig.NEXT_PUBLIC_APP_URL}/dashboard" 
                style="background: #1B4F72; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
               View Dashboard
             </a>
@@ -191,7 +190,7 @@ function generateDigestEmail(user: any, content: any): string {
           
           <p style="color: #666; font-size: 14px;">
             Don't want these emails? 
-            <a href="${config.NEXT_PUBLIC_APP_URL}/settings">Update your preferences</a>
+            <a href="${serverConfig.NEXT_PUBLIC_APP_URL}/settings">Update your preferences</a>
           </p>
         </body>
       </html>
@@ -218,7 +217,7 @@ function generateDigestEmail(user: any, content: any): string {
           </div>
           
           <p>
-            <a href="${config.NEXT_PUBLIC_APP_URL}/bounties" 
+            <a href="${serverConfig.NEXT_PUBLIC_APP_URL}/bounties" 
                style="background: #1B4F72; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
               Browse Bounties
             </a>
@@ -226,7 +225,7 @@ function generateDigestEmail(user: any, content: any): string {
           
           <p style="color: #666; font-size: 14px;">
             Don't want these emails? 
-            <a href="${config.NEXT_PUBLIC_APP_URL}/settings">Update your preferences</a>
+            <a href="${serverConfig.NEXT_PUBLIC_APP_URL}/settings">Update your preferences</a>
           </p>
         </body>
       </html>
